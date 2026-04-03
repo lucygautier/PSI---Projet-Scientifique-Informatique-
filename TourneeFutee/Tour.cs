@@ -2,21 +2,27 @@
 {
     // Modélise une tournée dans le cadre du problème du voyageur de commerce
     public class Tour
-    {
-        // TODO : ajouter tous les attributs que vous jugerez pertinents 
+    {      
+        List<(string source, string destination)> segment;
+        float cost;
 
+        public Tour(List<(string source, string destination)> segment, float cost)
+        {
+            this.segment = new List<(string source, string destination)>();
+            this.cost = cost;
+        }
         // propriétés
 
         // Coût total de la tournée
         public float Cost
         {
-            get;    // TODO : implémenter
+            get { return this.cost; }   
         }
 
         // Nombre de trajets dans la tournée
         public int NbSegments
         {
-            get;    // TODO : implémenter
+            get { return this.segment.Count; }   
         }
 
 
