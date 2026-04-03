@@ -8,8 +8,13 @@
 
         public Tour(List<(string source, string destination)> segment, float cost)
         {
-            this.segment = new List<(string source, string destination)>();
+            this.segment = segment;
             this.cost = cost;
+        }
+        public Tour()
+        {
+            this.segment = new List<(string source, string destination)>();
+            this.cost = 0.0f ;
         }
         // propriétés
 
@@ -29,7 +34,7 @@
         // Renvoie vrai si la tournée contient le trajet `source`->`destination`
         public bool ContainsSegment((string source, string destination) segment)
         {
-            return false;   // TODO : implémenter 
+            return this.segment.Contains(segment); //Retourne vraie si la liste segment contient le segment, retourne faux sinon
         }
 
 
