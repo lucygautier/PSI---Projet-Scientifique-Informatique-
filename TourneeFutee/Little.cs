@@ -26,24 +26,14 @@ namespace TourneeFutee
             { 
                 cityNames.Add(graph.GetVertexName(i)); 
             }
-
             Matrix matrix = CopyMatrix(graph.GetAdjacencyMatrix()); //Copie de la matrice des distances du graphe pour ne pas modifier le graphe d'origine
 
             for (int i = 0; i < order; i++) //Remplissage de la diagonale à +∞ dans la copie de la matrice
             { 
                 matrix.SetValue(i, i, float.PositiveInfinity); 
             }
-
             bestCost = float.PositiveInfinity; //Initialisation du meilleur coût 
-
-            return Solve( //Algorithme récursif pour trouver le meilleur chemin
-                matrix,
-                new List<string>(cityNames),
-                new List<string>(cityNames),
-                new List<(string, string)>(),
-                0,
-                order
-            );
+            return Solve(matrix,new List<string>(cityNames),new List<string>(cityNames),new List<(string, string)>(),0,order);
         }
 
         // --- Méthodes utilitaires réalisant des étapes de l'algorithme de Little
@@ -149,8 +139,7 @@ namespace TourneeFutee
 
                         if (float.IsPositiveInfinity(minLine)) minLine = 0;
                         if (float.IsPositiveInfinity(minColumn)) minColumn = 0;
-                        float regret = minLine + minColumn;
-
+                        float regret = minLine + minColumn;                      
                         if (regret > maxRegret)
                         {
                             maxRegret = regret;
@@ -168,85 +157,176 @@ namespace TourneeFutee
          */
         public static bool IsForbiddenSegment((string source, string destination) segment, List<(string source, string destination)> includedSegments, int nbCities)
         {
+            Dictionary<string, string> map = new Dictionary<string, string>();
+
+            foreach (var s in includedSegments)
+            {
+                map[s.source] = s.destination;
+            }
             int count = 1;
             string current = segment.destination;
 
             while (current != segment.source)
             {
-                var next = includedSegments.Find(s => s.source == current);
-                if (next == default)
-                    return false;
-                current = next.destination;
+                if (!map.ContainsKey(current))
+                { 
+                    return false; 
+                }
+                current = map[current];
                 count++;
             }
-
             return count < nbCities;
         }
 
         // TODO : ajouter toutes les méthodes que vous jugerez pertinentes 
 
-        private Tour Solve(Matrix m, List<string> rowCities, List<string> colCities,
-            List<(string source, string destination)> includedSegments, float currentBound, int nbCities)
+        private Tour Solve(Matrix m,List<string> rowCities,List<string> colCities,List<(string source, string destination)> includedSegments,float currentBound,int nbCities)
         {
             currentBound += ReduceMatrix(m);
 
             if (currentBound >= bestCost)
-                return new Tour(new List<(string, string)>(), float.PositiveInfinity);
-
-            // Cas de base : matrice 2x2
-            if (m.NbRows == 2)
             {
-                List<(string, string)> segs = new List<(string, string)>(includedSegments);
-                float cost1 = m.GetValue(0, 0) + m.GetValue(1, 1);
-                float cost2 = m.GetValue(0, 1) + m.GetValue(1, 0);
-
-                if (cost1 <= cost2)
-                {
-                    segs.Add((rowCities[0], colCities[0]));
-                    segs.Add((rowCities[1], colCities[1]));
-                }
-                else
-                {
-                    segs.Add((rowCities[0], colCities[1]));
-                    segs.Add((rowCities[1], colCities[0]));
-                }
-
-                float totalCost = currentBound + Math.Min(cost1, cost2);
-                if (totalCost < bestCost) bestCost = totalCost;
-                return new Tour(segs, totalCost);
+                return new Tour(new List<(string, string)>(), float.PositiveInfinity);
             }
 
-            // Regret maximal
-            (int ri, int rj, float _) = GetMaxRegret(m);
+            if (m.NbRows == 1)
+            {
+                List<(string source, string destination)> finalSegments =new List<(string source, string destination)>(includedSegments);
+                finalSegments.Add((rowCities[0], colCities[0]));
+                return this.BuildTourIfValid(finalSegments, nbCities);
+            }
+
+            if (m.NbRows == 2)
+            {
+                List<(string source, string destination)> candidate1 = new List<(string source, string destination)>(includedSegments);
+                candidate1.Add((rowCities[0], colCities[0]));
+                candidate1.Add((rowCities[1], colCities[1]));
+                Tour tour1 = this.BuildTourIfValid(candidate1, nbCities);
+                List<(string source, string destination)> candidate2 = new List<(string source, string destination)>(includedSegments);
+                candidate2.Add((rowCities[0], colCities[1]));
+                candidate2.Add((rowCities[1], colCities[0]));
+                Tour tour2 = this.BuildTourIfValid(candidate2, nbCities);
+                return tour1.Cost <= tour2.Cost ? tour1 : tour2;
+            }
+
+            (int ri, int rj, float regret) = GetMaxRegret(m);
+
+            if (ri < 0 || rj < 0 || float.IsNegativeInfinity(regret))
+            {
+                return new Tour(new List<(string, string)>(), float.PositiveInfinity);
+            }
             string source = rowCities[ri];
-            string dest = colCities[rj];
+            string destination = colCities[rj];
+            Matrix includeMatrix = CopyMatrix(m);
+            List<string> includeRows = new List<string>(rowCities);
+            List<string> includeCols = new List<string>(colCities);
+            List<(string source, string destination)> includeSegments = new List<(string source, string destination)>(includedSegments);
+            includeSegments.Add((source, destination));
+            includeMatrix.RemoveRow(ri);
+            includeMatrix.RemoveColumn(rj);
+            includeRows.RemoveAt(ri);
+            includeCols.RemoveAt(rj);
 
-            Matrix incM = CopyMatrix(m);
-            List<string> incRows = new List<string>(rowCities);
-            List<string> incCols = new List<string>(colCities);
-            List<(string source, string destination)> incSegs = new List<(string source, string destination)>(includedSegments);
-            incSegs.Add((source, dest));
+            for (int i = 0; i < includeMatrix.NbRows; i++)
+            {
+                for (int j = 0; j < includeMatrix.NbColumns; j++)
+                {
+                    if (IsForbiddenSegment((includeRows[i], includeCols[j]), includeSegments, nbCities))
+                    {
+                        includeMatrix.SetValue(i, j, float.PositiveInfinity);
+                    }
+                }
+            }
 
-            incM.RemoveRow(ri);
-            incM.RemoveColumn(rj);
-            incRows.RemoveAt(ri);
-            incCols.RemoveAt(rj);
-
-            // Eviter les trajets parasites
-            for (int i = 0; i < incM.NbRows; i++)
-                for (int j = 0; j < incM.NbColumns; j++)
-                    if (IsForbiddenSegment((incRows[i], incCols[j]), incSegs, nbCities))
-                        incM.SetValue(i, j, float.PositiveInfinity);
-
-            Tour includeTour = Solve(incM, incRows, incCols, incSegs, currentBound, nbCities);
-
-            Matrix excM = CopyMatrix(m);
-            excM.SetValue(ri, rj, float.PositiveInfinity);
-
-            Tour excludeTour = Solve(excM, new List<string>(rowCities), new List<string>(colCities),
-                new List<(string source, string destination)>(includedSegments), currentBound, nbCities);
-
+            Tour includeTour = Solve(includeMatrix,includeRows,includeCols,includeSegments,currentBound, nbCities);
+            Matrix excludeMatrix = CopyMatrix(m);
+            excludeMatrix.SetValue(ri, rj, float.PositiveInfinity);
+            Tour excludeTour = Solve(excludeMatrix, new List<string>(rowCities),new List<string>(colCities),new List<(string source, string destination)>(includedSegments),currentBound,nbCities);
             return includeTour.Cost <= excludeTour.Cost ? includeTour : excludeTour;
+        }
+
+        private Tour BuildTourIfValid(List<(string source, string destination)> segments, int nbCities)
+        {
+            if (segments.Count != nbCities)
+            {
+                return new Tour(new List<(string, string)>(), float.PositiveInfinity);
+            }
+
+            HashSet<string> sources = new HashSet<string>();
+            HashSet<string> destinations = new HashSet<string>();
+
+            foreach ((string source, string destination) segment in segments)
+            {
+                if (sources.Contains(segment.source) || destinations.Contains(segment.destination))
+                {
+                    return new Tour(new List<(string, string)>(), float.PositiveInfinity);
+                }
+                sources.Add(segment.source);
+                destinations.Add(segment.destination);
+            }
+
+            if (!this.IsHamiltonianCycle(segments, nbCities))
+            {
+                return new Tour(new List<(string, string)>(), float.PositiveInfinity);
+            }
+
+            float totalCost = this.ComputeTourCost(segments);
+
+            if (float.IsPositiveInfinity(totalCost))
+            {
+                return new Tour(new List<(string, string)>(), float.PositiveInfinity);
+            }
+
+            if (totalCost < bestCost)
+            {
+                bestCost = totalCost;
+            }
+            return new Tour(segments, totalCost);
+        }
+
+        private bool IsHamiltonianCycle(List<(string source, string destination)> segments, int nbCities)
+        {
+            Dictionary<string, string> successors = new Dictionary<string, string>();
+
+            foreach ((string source, string destination) segment in segments)
+            {
+                successors[segment.source] = segment.destination;
+            }
+
+            string start = segments[0].source;
+            string current = start;
+            int count = 0;
+
+            do
+            {
+                if (!successors.ContainsKey(current))
+                {
+                    return false;
+                }
+
+                current = successors[current];
+                count++;
+            }
+            while (current != start && count <= nbCities);
+            return current == start && count == nbCities;
+        }
+
+        private float ComputeTourCost(List<(string source, string destination)> segments)
+        {
+            float totalCost = 0.0f;
+
+            foreach ((string source, string destination) segment in segments)
+            {
+                try
+                {
+                    totalCost += this.graph.GetEdgeWeight(segment.source, segment.destination);
+                }
+                catch (ArgumentException)
+                {
+                    return float.PositiveInfinity;
+                }
+            }
+            return totalCost;
         }
         private static Matrix CopyMatrix(Matrix matrix)
         {
