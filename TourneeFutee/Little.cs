@@ -57,7 +57,8 @@ namespace TourneeFutee
 
             for (int i = 0; i < m.NbRows; i++)
             {
-                float minLine = float.MaxValue;
+                float minLine = float.PositiveInfinity;
+
                 for (int j = 0; j < m.NbColumns; j++)
                 {
                     if (m.GetValue(i, j) < minLine)
@@ -65,16 +66,25 @@ namespace TourneeFutee
                         minLine = m.GetValue(i, j);
                     }
                 }
-                for (int j = 0; j < m.NbColumns; j++)
+
+                if (!float.IsPositiveInfinity(minLine) && minLine > 0)
                 {
-                    m.SetValue(i, j, m.GetValue(i, j) - minLine);
+                    for (int j = 0; j < m.NbColumns; j++)
+                    {
+                        if (!float.IsPositiveInfinity(m.GetValue(i, j)))
+                        {
+                            m.SetValue(i, j, m.GetValue(i, j) - minLine);
+                        }
+                    }
+
+                    sum += minLine;
                 }
-                sum += minLine;
             }
 
             for (int i = 0; i < m.NbColumns; i++)
             {
-                float minColumn = float.MaxValue;
+                float minColumn = float.PositiveInfinity;
+
                 for (int j = 0; j < m.NbRows; j++)
                 {
                     if (m.GetValue(j, i) < minColumn)
@@ -82,13 +92,19 @@ namespace TourneeFutee
                         minColumn = m.GetValue(j, i);
                     }
                 }
-                for (int j = 0; j < m.NbRows; j++)
-                {
-                    m.SetValue(j, i, m.GetValue(j, i) - minColumn);
-                }
-                sum += minColumn;
-            }
 
+                if (!float.IsPositiveInfinity(minColumn) && minColumn > 0)
+                {
+                    for (int j = 0; j < m.NbRows; j++)
+                    {
+                        if (!float.IsPositiveInfinity(m.GetValue(j, i)))
+                        {
+                            m.SetValue(j, i, m.GetValue(j, i) - minColumn);
+                        }
+                    }
+                    sum += minColumn;
+                }
+            }
             return sum;
         }
 
