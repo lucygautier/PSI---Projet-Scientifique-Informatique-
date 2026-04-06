@@ -41,7 +41,12 @@
         // Affiche les informations sur la tournée : coût total et trajets
         public void Print()
         {
-            // TODO : implémenter 
+            Console.WriteLine($"Coût total de la tournée : {this.cost}");
+            Console.WriteLine("Trajets :");
+            foreach ((string source, string destination) segment in this.segment)
+            {
+                Console.WriteLine($"{segment.source} -> {segment.destination}");
+            }
         }
 
         // TODO : ajouter toutes les méthodes que vous jugerez pertinentes 
