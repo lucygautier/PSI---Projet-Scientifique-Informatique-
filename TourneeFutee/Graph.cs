@@ -274,6 +274,20 @@ namespace TourneeFutee
                 adjacencyMatrix.SetValue(destinationIndex, sourceIndex, weight);
             }
         }
+        //Méthode ajoutée pour pouvoir l'utiliser dans la classe Little
+        public string GetVertexName(int index)
+        {
+            if (!indexToVertex.ContainsKey(index))
+            {
+                throw new ArgumentException($"Aucun sommet à l'indice {index}");
+            }
+
+            return indexToVertex[index];
+        }
+        public Matrix GetAdjacencyMatrix()
+        {
+            return this.adjacencyMatrix;
+        }
     }
 
 
