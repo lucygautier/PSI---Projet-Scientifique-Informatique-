@@ -112,42 +112,55 @@ namespace TourneeFutee
         // où `i`, `j`, et `value` contiennent respectivement la ligne, la colonne et la valeur du regret maximale
         public static (int i, int j, float value) GetMaxRegret(Matrix m)
         {
+            int n = m.NbRows;
             float maxRegret = float.MinValue;
-            int indice_i = 0, indice_j = 0;
-            for (int i = 0; i < m.NbRows; i++)
+            int bestI = -1, bestJ = -1;
+
+            for (int i = 0; i < n; i++)
             {
-                for (int j = 0; j < m.NbColumns; j++)
+                for (int j = 0; j < n; j++)
                 {
-                    if (m.GetValue(i, j) == 0.0f)
+                    if (m.GetValue(i, j) == 0)
                     {
-                        float minLine = float.MaxValue;
-                        float minColumn = float.MaxValue;
-                        for (int k = 0; k < m.NbColumns; k++)
+                        float minLine = float.PositiveInfinity;
+                        float minColumn = float.PositiveInfinity;
+                       
+                        for (int k = 0; k < n; k++) //Minimum de ligne (hors j)
                         {
-                            if (k != j && m.GetValue(i, k) < minLine)
+                            if (k != j && !float.IsPositiveInfinity(m.GetValue(i, k)))
                             {
-                                minLine = m.GetValue(i, k);
+                                if (m.GetValue(i, k) < minLine)
+                                {
+                                    minLine = m.GetValue(i, k);
+                                }
+                            }
+                        }
+                
+                        for (int k = 0; k < n; k++) //Minomum de colonne (hors i)
+                        {
+                            if (k != i && !float.IsPositiveInfinity(m.GetValue(k, j)))
+                            {
+                                if (m.GetValue(k, j) < minColumn)
+                                {
+                                    minColumn = m.GetValue(k, j);
+                                }
                             }
                         }
 
-                        for (int k = 0; k < m.NbRows; k++)
-                        {
-                            if (k != i && m.GetValue(k, j) < minColumn)
-                            {
-                                minColumn = m.GetValue(k, j);
-                            }
-                        }
+                        if (float.IsPositiveInfinity(minLine)) minLine = 0;
+                        if (float.IsPositiveInfinity(minColumn)) minColumn = 0;
                         float regret = minLine + minColumn;
+
                         if (regret > maxRegret)
                         {
                             maxRegret = regret;
-                            indice_i = i;
-                            indice_j = j;
+                            bestI = i;
+                            bestJ = j;
                         }
                     }
                 }
             }
-            return (indice_i, indice_j, maxRegret);
+            return (bestI, bestJ, maxRegret);
         }
 
         /* Renvoie vrai si le segment `segment` est un trajet parasite, c'est-à-dire s'il ferme prématurément la tournée incluant les trajets contenus dans `includedSegments`
