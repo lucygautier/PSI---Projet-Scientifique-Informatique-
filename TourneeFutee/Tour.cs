@@ -1,10 +1,14 @@
 ﻿namespace TourneeFutee
 {
     // Modélise une tournée dans le cadre du problème du voyageur de commerce
+
+    // NOTE : nécessite que Tour expose un constructeur Tour(List<string>, float)
+    // et une propriété Vertices — à ajouter dans Tour.cs
     public class Tour
     {      
         List<(string source, string destination)> segment;
         float cost;
+        List<string> vertices;
 
         public Tour(List<(string source, string destination)> segment, float cost)
         {
@@ -15,6 +19,13 @@
         {
             this.segment = new List<(string source, string destination)>();
             this.cost = 0.0f ;
+        }
+
+        //Constructeur pour l'objectif 3
+        public Tour(List<string> vertices, float cost)
+        {
+            this.vertices =vertices;
+            this.cost = cost;
         }
         // propriétés
 
@@ -30,7 +41,11 @@
             get { return this.segment.Count; }   
         }
 
-
+        //Propriété pour l'objectif 3
+        public List<string> Vertices
+        {
+            get { return this.vertices; }
+        }
         // Renvoie vrai si la tournée contient le trajet `source`->`destination`
         public bool ContainsSegment((string source, string destination) segment)
         {
