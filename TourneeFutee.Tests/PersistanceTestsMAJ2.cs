@@ -60,8 +60,9 @@ namespace TourneeFutee.Tests
         /// </summary>
         private static Graph BuildAsymmetricGraph()
         {
+            // FIX : paramètre renommé de `isOriented` vers `directed`
             // Graphe orienté à 6 sommets
-            var g = new Graph(isOriented: true);
+            var g = new Graph(directed: true);
 
             // Ajout des sommets (valeur = 0.0 par défaut)
             g.AddVertex("A", 0f);
@@ -98,7 +99,8 @@ namespace TourneeFutee.Tests
         /// </summary>
         private static Graph BuildSimpleGraph()
         {
-            var g = new Graph(isOriented: false);
+            // FIX : paramètre renommé de `isOriented` vers `directed`
+            var g = new Graph(directed: false);
             g.AddVertex("X", 1.5f);
             g.AddVertex("Y", 2.0f);
             g.AddVertex("Z", 3.5f);
@@ -156,12 +158,14 @@ namespace TourneeFutee.Tests
 
             // Vérifier le nombre de sommets
             Assert.AreEqual(
-                original.VertexCount, loaded.VertexCount,
+                // FIX : VertexCount->Order
+                original.Order, loaded.Order,
                 "Le nombre de sommets doit être identique après rechargement.");
 
             // Vérifier que les sommets ont les mêmes noms et valeurs
             foreach (string name in new[] { "X", "Y", "Z" })
             {
+               
                 Assert.IsTrue(loaded.ContainsVertex(name),
                     $"Le sommet '{name}' doit exister dans le graphe rechargé.");
                 Assert.AreEqual(
@@ -175,8 +179,9 @@ namespace TourneeFutee.Tests
             Assert.AreEqual(30f, loaded.GetEdgeWeight("X", "Z"), 0.001f, "Poids X->Z incorrect.");
 
             // Vérifier que le graphe rechargé est non orienté
-            Assert.AreEqual(original.IsOriented, loaded.IsOriented,
-                "La propriété IsOriented doit être identique.");
+            // FIX : IsOriented -> Directed
+            Assert.AreEqual(original.Directed, loaded.Directed,
+                "La propriété Directed doit être identique.");
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -193,8 +198,8 @@ namespace TourneeFutee.Tests
             Graph original = BuildAsymmetricGraph();
             uint id = _service.SaveGraph(original);
             Graph loaded = _service.LoadGraph(id);
-
-            Assert.AreEqual(original.VertexCount, loaded.VertexCount,
+            // FIX : VertexCount->Order
+            Assert.AreEqual(original.Order, loaded.Order,
                 "Nombre de sommets différent après rechargement.");
 
             // Vérifier quelques poids caractéristiques
@@ -204,7 +209,7 @@ namespace TourneeFutee.Tests
             Assert.AreEqual(2f,  loaded.GetEdgeWeight("E", "D"), 0.001f, "Poids E->D incorrect.");
             Assert.AreEqual(4f,  loaded.GetEdgeWeight("E", "F"), 0.001f, "Poids E->F incorrect.");
 
-            Assert.IsTrue(loaded.IsOriented,
+            Assert.IsTrue(loaded.Directed,
                 "Le graphe rechargé doit être orienté.");
         }
 
@@ -251,7 +256,8 @@ namespace TourneeFutee.Tests
             Tour loadedTour = _service.LoadTour(tourId);
 
             // Vérifier le coût total
-            Assert.AreEqual(originalTour.TotalCost, loadedTour.TotalCost, 0.001f,
+            // FIX : TotalCost -> Cost
+            Assert.AreEqual(originalTour.Cost, loadedTour.Cost, 0.001f,
                 "Le coût total de la tournée doit être identique après rechargement.");
 
             // Vérifier la séquence complète des sommets
@@ -288,10 +294,10 @@ namespace TourneeFutee.Tests
 
             Graph loaded1 = _service.LoadGraph(id1);
             Graph loaded2 = _service.LoadGraph(id2);
-
-            Assert.AreEqual(g1.VertexCount, loaded1.VertexCount,
+            // FIX : VertexCount -> Order
+            Assert.AreEqual(g1.Order, loaded1.Order,
                 "Le graphe 1 rechargé doit avoir le bon nombre de sommets.");
-            Assert.AreEqual(g2.VertexCount, loaded2.VertexCount,
+            Assert.AreEqual(g2.Order, loaded2.Order,
                 "Le graphe 2 rechargé doit avoir le bon nombre de sommets.");
         }
     }
