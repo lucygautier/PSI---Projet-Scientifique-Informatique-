@@ -14,6 +14,7 @@ namespace TourneeFutee
         // ─────────────────────────────────────────────────────────────────────
 
         private readonly string _connectionString;
+        private MySqlConnection conn;
 
         // TODO : si vous avez besoin de maintenir une connexion ouverte,
         //        ajoutez un attribut MySqlConnection ici.
@@ -39,7 +40,16 @@ namespace TourneeFutee
           // TODO : initialiser et ouvrir la connexion à la base de données
         // Exemple :
             _connectionString = $"server={serverIp};database={dbname};uid={user};pwd={pwd};";
+            //Test de la connexion
+            using (MySqlConnection testConn = new MySqlConnection(_connectionString))
+            {
+                testConn.Open();
+            }
 
+            // vraie connexion utilisée par la classe
+            conn = OpenConnection();
+
+            return;
             // TODO : tester la connexion dès la construction
             //        (ouvrir puis fermer une connexion pour valider les paramètres)
             throw new NotImplementedException("Constructeur non implémenté.");
@@ -69,6 +79,67 @@ namespace TourneeFutee
             // Exemple pour récupérer l'id généré :
             //   uint id = Convert.ToUInt32(cmd.ExecuteScalar());
 
+            using (MySqlConnection conn = OpenConnection())
+            {
+                //Insértion du graphe
+                string sqlGraphe = @"INSERT INTO Graphe (nom, nb_sommets, est_oriente)
+                                    VALUES (@nom, @nb_sommets, @est_oriente);
+                                    SELECT LAST_INSERT_ID();";
+
+                MySqlCommand cmdGraphe = new MySqlCommand(sqlGraphe, conn);
+                cmdGraphe.Parameters.AddWithValue("@nom", "Graphe");
+                cmdGraphe.Parameters.AddWithValue("@nb_sommets", g.Order);
+                cmdGraphe.Parameters.AddWithValue("@est_oriente", 0);
+
+                uint grapheId = Convert.ToUInt32(cmdGraphe.ExecuteScalar());
+
+                //Dictionnaire pour faire le lien entre indice C# et id SQL
+                Dictionary<int, uint> idsSommets = new Dictionary<int, uint>();
+
+                //Insértion des sommets
+                for (int i = 0; i < g.Order; i++)
+                {
+                    string nomSommet = g.GetVertexName(i);
+
+                    string sqlSommet = @"INSERT INTO Sommet (graphe_id, nom, valeur, indice)
+                                         VALUES (@graphe_id, @nom, @valeur, @indice);
+                                         SELECT LAST_INSERT_ID();";
+
+                    MySqlCommand cmdSommet = new MySqlCommand(sqlSommet, conn);
+                    cmdSommet.Parameters.AddWithValue("@graphe_id", grapheId);
+                    cmdSommet.Parameters.AddWithValue("@nom", nomSommet);
+                    cmdSommet.Parameters.AddWithValue("@valeur", 0);
+                    cmdSommet.Parameters.AddWithValue("@indice", i);
+
+                    uint sommetId = Convert.ToUInt32(cmdSommet.ExecuteScalar());
+                    idsSommets.Add(i, sommetId);
+                }
+
+                //Insertion des arcs
+                Matrix matrice = g.GetAdjacencyMatrix();
+
+                for (int i = 0; i < g.Order; i++)
+                {
+                    for (int j = 0; j < g.Order; j++)
+                    {
+                        float poids = matrice.GetValue(i, j);
+
+                        if (i != j && !float.IsPositiveInfinity(poids) && poids != 0)
+                        {
+                            string sqlArc = @"INSERT INTO Arc (graphe_id, sommet_source, sommet_dest, poids)
+                                            VALUES (@graphe_id, @source, @dest, @poids);";
+
+                            MySqlCommand cmdArc = new MySqlCommand(sqlArc, conn);
+                            cmdArc.Parameters.AddWithValue("@graphe_id", grapheId);
+                            cmdArc.Parameters.AddWithValue("@source", idsSommets[i]);
+                            cmdArc.Parameters.AddWithValue("@dest", idsSommets[j]);
+                            cmdArc.Parameters.AddWithValue("@poids", poids);
+                            cmdArc.ExecuteNonQuery();
+                        }
+                    }
+                }
+                return grapheId;
+            }
             throw new NotImplementedException("SaveGraph non implémenté.");
         }
 
@@ -89,6 +160,8 @@ namespace TourneeFutee
             //       correspondent à ceux sauvegardés)
             //   3. SELECT dans Arc WHERE graphe_id = @id -> reconstruire la matrice
             //      d'adjacence en utilisant les correspondances sommet_id <-> indice
+
+
 
             throw new NotImplementedException("LoadGraph non implémenté.");
         }
