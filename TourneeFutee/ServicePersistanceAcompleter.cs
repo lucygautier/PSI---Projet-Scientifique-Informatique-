@@ -254,6 +254,42 @@ namespace TourneeFutee
             // Attention : conserver l'ordre des étapes est essentiel pour
             //             pouvoir reconstruire la tournée fidèlement au chargement.
 
+            using (MySqlConnection conn = OpenConnection())
+            {
+                string sqlTournee = @"INSERT INTO Tournee (graphe_id, cout_total)
+                                    VALUES (@graphe_id, @cout_total);
+                                    SELECT LAST_INSERT_ID();";
+
+                MySqlCommand cmdTournee = new MySqlCommand(sqlTournee, conn);
+                cmdTournee.Parameters.AddWithValue("@graphe_id", graphId);
+                cmdTournee.Parameters.AddWithValue("@cout_total", t.Cost);
+                uint tourneeId = Convert.ToUInt32(cmdTournee.ExecuteScalar());
+
+                for (int i = 0; i < t.Vertices.Count; i++)
+                {
+                    string nomSommet = t.Vertices[i];
+
+                    string sqlSommet = @"SELECT id
+                                        FROM Sommet
+                                        WHERE graphe_id = @graphe_id AND nom = @nom;";
+
+                    MySqlCommand cmdSommet = new MySqlCommand(sqlSommet, conn);
+                    cmdSommet.Parameters.AddWithValue("@graphe_id", graphId);
+                    cmdSommet.Parameters.AddWithValue("@nom", nomSommet);
+
+                    uint sommetId = Convert.ToUInt32(cmdSommet.ExecuteScalar());
+
+                    string sqlEtape = @"INSERT INTO EtapeTournee (tournee_id, numero_ordre, sommet_id)
+                                        VALUES (@tournee_id, @numero_ordre, @sommet_id);";
+
+                    MySqlCommand cmdEtape = new MySqlCommand(sqlEtape, conn);
+                    cmdEtape.Parameters.AddWithValue("@tournee_id", tourneeId);
+                    cmdEtape.Parameters.AddWithValue("@numero_ordre", i);
+                    cmdEtape.Parameters.AddWithValue("@sommet_id", sommetId);
+                    cmdEtape.ExecuteNonQuery();
+                }
+                return tourneeId;
+            }
             throw new NotImplementedException("SaveTour non implémenté.");
         }
 
