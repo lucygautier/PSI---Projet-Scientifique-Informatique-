@@ -161,8 +161,76 @@ namespace TourneeFutee
             //   3. SELECT dans Arc WHERE graphe_id = @id -> reconstruire la matrice
             //      d'adjacence en utilisant les correspondances sommet_id <-> indice
 
+            using (MySqlConnection conn = OpenConnection())
+            {
+                // 1. Charger le graphe
+                string sqlGraphe = "SELECT est_oriente FROM Graphe WHERE id = @id;";
+                MySqlCommand cmdGraphe = new MySqlCommand(sqlGraphe, conn);
+                cmdGraphe.Parameters.AddWithValue("@id", id);
 
+                object result = cmdGraphe.ExecuteScalar();
 
+                if (result == null)
+                {
+                    return null;
+                }
+                bool estOriente = Convert.ToBoolean(result);
+
+                Graph g = new Graph(estOriente);
+
+                //Chargement des sommets
+                Dictionary<uint, int> idSqlVersIndice = new Dictionary<uint, int>();
+
+                string sqlSommets = @"SELECT id, nom, valeur, indice
+                                    FROM Sommet
+                                    WHERE graphe_id = @id
+                                    ORDER BY indice;";
+
+                MySqlCommand cmdSommets = new MySqlCommand(sqlSommets, conn);
+                cmdSommets.Parameters.AddWithValue("@id", id);
+
+                using (MySqlDataReader reader = cmdSommets.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        uint sommetId = Convert.ToUInt32(reader["id"]);
+                        string nom = reader["nom"].ToString();
+                        float valeur = 0;
+
+                        if (reader["valeur"] != DBNull.Value)
+                        {
+                            valeur = Convert.ToSingle(reader["valeur"]);
+                        }
+                        int indice = Convert.ToInt32(reader["indice"]);
+                        g.AddVertex(nom, valeur);
+                        idSqlVersIndice.Add(sommetId, indice);
+                    }
+                }
+
+                //Chargement des arcs
+                string sqlArcs = @"SELECT sommet_source, sommet_dest, poids
+                                FROM Arc
+                                WHERE graphe_id = @id;";
+
+                MySqlCommand cmdArcs = new MySqlCommand(sqlArcs, conn);
+                cmdArcs.Parameters.AddWithValue("@id", id);
+
+                using (MySqlDataReader reader = cmdArcs.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        uint sourceId = Convert.ToUInt32(reader["sommet_source"]);
+                        uint destId = Convert.ToUInt32(reader["sommet_dest"]);
+                        float poids = Convert.ToSingle(reader["poids"]);
+                        int indiceSource = idSqlVersIndice[sourceId];
+                        int indiceDest = idSqlVersIndice[destId];
+                        string nomSource = g.GetVertexName(indiceSource);
+                        string nomDest = g.GetVertexName(indiceDest);
+                        g.SetEdgeWeight(nomSource, nomDest, poids);
+                    }
+                }
+                return g;
+            }
             throw new NotImplementedException("LoadGraph non implémenté.");
         }
 
