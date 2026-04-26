@@ -288,6 +288,12 @@ namespace TourneeFutee
         {
             return this.adjacencyMatrix;
         }
+
+        //Méthode ajoutée pour pouvoir l'utiliser dans la classe ServicePersistanceACompleter
+        public bool ContainsVertex(string name)
+        {
+            return vertexIndices.ContainsKey(name);
+        }
     }
 
 
