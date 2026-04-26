@@ -81,7 +81,8 @@ namespace TourneeFutee
 
             using (MySqlConnection conn = OpenConnection())
             {
-                //Insértion du graphe
+                bool estOriente = g.Directed; 
+
                 string sqlGraphe = @"INSERT INTO Graphe (nom, nb_sommets, est_oriente)
                                     VALUES (@nom, @nb_sommets, @est_oriente);
                                     SELECT LAST_INSERT_ID();";
@@ -89,33 +90,27 @@ namespace TourneeFutee
                 MySqlCommand cmdGraphe = new MySqlCommand(sqlGraphe, conn);
                 cmdGraphe.Parameters.AddWithValue("@nom", "Graphe");
                 cmdGraphe.Parameters.AddWithValue("@nb_sommets", g.Order);
-                cmdGraphe.Parameters.AddWithValue("@est_oriente", 0);
-
+                cmdGraphe.Parameters.AddWithValue("@est_oriente", estOriente ? 1 : 0);
                 uint grapheId = Convert.ToUInt32(cmdGraphe.ExecuteScalar());
 
-                //Dictionnaire pour faire le lien entre indice C# et id SQL
                 Dictionary<int, uint> idsSommets = new Dictionary<int, uint>();
 
-                //Insértion des sommets
                 for (int i = 0; i < g.Order; i++)
                 {
                     string nomSommet = g.GetVertexName(i);
 
                     string sqlSommet = @"INSERT INTO Sommet (graphe_id, nom, valeur, indice)
-                                         VALUES (@graphe_id, @nom, @valeur, @indice);
-                                         SELECT LAST_INSERT_ID();";
+                                        VALUES (@graphe_id, @nom, @valeur, @indice);
+                                        SELECT LAST_INSERT_ID();";
 
                     MySqlCommand cmdSommet = new MySqlCommand(sqlSommet, conn);
                     cmdSommet.Parameters.AddWithValue("@graphe_id", grapheId);
                     cmdSommet.Parameters.AddWithValue("@nom", nomSommet);
-                    cmdSommet.Parameters.AddWithValue("@valeur", 0);
+                    cmdSommet.Parameters.AddWithValue("@valeur", g.GetVertexValue(nomSommet));
                     cmdSommet.Parameters.AddWithValue("@indice", i);
-
                     uint sommetId = Convert.ToUInt32(cmdSommet.ExecuteScalar());
                     idsSommets.Add(i, sommetId);
                 }
-
-                //Insertion des arcs
                 Matrix matrice = g.GetAdjacencyMatrix();
 
                 for (int i = 0; i < g.Order; i++)
@@ -123,8 +118,18 @@ namespace TourneeFutee
                     for (int j = 0; j < g.Order; j++)
                     {
                         float poids = matrice.GetValue(i, j);
+                        bool doitSauvegarder = false;
 
-                        if (i != j && !float.IsPositiveInfinity(poids) && poids != 0)
+                        if (estOriente)
+                        {
+                            doitSauvegarder = i != j;
+                        }
+                        else
+                        {
+                            doitSauvegarder = i < j;
+                        }
+
+                        if (doitSauvegarder && !float.IsPositiveInfinity(poids) && poids != 0)
                         {
                             string sqlArc = @"INSERT INTO Arc (graphe_id, sommet_source, sommet_dest, poids)
                                             VALUES (@graphe_id, @source, @dest, @poids);";
@@ -226,7 +231,8 @@ namespace TourneeFutee
                         int indiceDest = idSqlVersIndice[destId];
                         string nomSource = g.GetVertexName(indiceSource);
                         string nomDest = g.GetVertexName(indiceDest);
-                        g.SetEdgeWeight(nomSource, nomDest, poids);
+                        //g.SetEdgeWeight(nomSource, nomDest, poids);
+                        g.AddEdge(nomSource, nomDest, poids);
                     }
                 }
                 return g;
